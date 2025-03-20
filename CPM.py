@@ -3,10 +3,10 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
-
-# --- Data Processing Functions (unchanged) ---
-# Convert 'Predecessors' column to list of integers
 def convert_predecessors(x):
+    """
+    Convert 'Predecessors' column to list of integers.
+    """
     if pd.isna(x):
         return
     elif isinstance(x, (int, float)):
@@ -60,9 +60,8 @@ def all_paths_with_duration(df):
 
     return paths_with_durations
 
-# --- Visualization Function (modified for Plotly) ---
 def create_network_diagram(df, x_coordinate_dict, y_coordinate_dict, radius, x_offset, y_offset,
-                           project_start_date=None):
+                               project_start_date=None, critical_path_duration=None, all_paths_with_durations=None):
     """
     Creates a network diagram using Plotly with arrows.
 
@@ -75,6 +74,8 @@ def create_network_diagram(df, x_coordinate_dict, y_coordinate_dict, radius, x_o
         y_offset (float): Offset for the text along the y-axis.
         project_start_date (str, optional): The project's start date in 'YYYY-MM-DD' format.
                                            If provided, the x-axis will show dates.
+        critical_path_duration (int, optional): The duration of the critical path.
+        all_paths_with_durations (dict, optional):  Dictionary containing all paths and their durations.
     """
     total_duration = df['Duration'].sum()
 
@@ -138,7 +139,6 @@ def create_network_diagram(df, x_coordinate_dict, y_coordinate_dict, radius, x_o
 
         # Add activity number inside the circle with offset
         duration = df["Duration"].iloc[i]
-        time_to_finish = total_duration - duration
 
         # Activity text
         fig_initial.add_trace(go.Scatter(
@@ -150,7 +150,7 @@ def create_network_diagram(df, x_coordinate_dict, y_coordinate_dict, radius, x_o
             hoverinfo="skip"
         ))
 
-        # Duration text
+        # Days since start
         if project_start_date:
             x_coordinate_duration = x_coordinate - text_x_offset
             x_coordinate_finish = x_coordinate + text_x_offset
@@ -161,12 +161,15 @@ def create_network_diagram(df, x_coordinate_dict, y_coordinate_dict, radius, x_o
             x=[x_coordinate_duration],
             y=[y_coordinate - y_offset],
             mode="text",
-            text=[str(duration)],
+            text=[str(x_coordinate)],
             textposition="middle center",
             hoverinfo="skip"
         ))
 
         # Time to finish text
+        time_to_finish = calculate_time_to_finish(df, activity, x_coordinate_dict, y_coordinate_dict,
+                                                  all_paths_with_durations, critical_path_duration)
+
         fig_initial.add_trace(go.Scatter(
             x=[x_coordinate_finish],
             y=[y_coordinate - y_offset],
@@ -329,7 +332,7 @@ def create_network_diagram(df, x_coordinate_dict, y_coordinate_dict, radius, x_o
         max_date = max(x_coordinate_dict.values())
 
         # Calculate tick positions at daily intervals
-        tick_vals = []
+        tick_vals =[]
         tick_text =[]
         current_date = min_date
         while current_date <= max_date:
@@ -375,7 +378,49 @@ def create_network_diagram(df, x_coordinate_dict, y_coordinate_dict, radius, x_o
 
     return fig_corrected
 
-# --- Streamlit App ---
+def calculate_time_to_finish(df, activity, x_coordinate_dict, y_coordinate_dict, all_paths_with_durations,
+                                 critical_path_duration):
+    """
+    Calculates the 'time to finish' for an activity.
+
+    Args:
+        activity (int): The activity number.
+        x_coordinate_dict (dict): Dictionary of x-coordinates for each activity.
+        y_coordinate_dict (dict): Dictionary of y-coordinates for each activity.
+        all_paths_with_durations (dict): Dictionary containing all paths and their durations.
+        critical_path_duration (int): The duration of the critical path.
+
+    Returns:
+        int: The calculated time to finish for the activity.
+    """
+    # Find the critical path
+    max_duration = 0
+    critical_path = None
+    for start_activity, paths in all_paths_with_durations.items():
+        for path_data in paths:
+            if path_data['duration'] > max_duration:
+                max_duration = path_data['duration']
+                critical_path = path_data['path']
+
+    if activity in critical_path:
+        # Activity is on the critical path
+        #time_to_finish = critical_path_duration - x_coordinate_dict[activity]
+        time_to_finish = x_coordinate_dict[activity]
+    else:
+        # Activity is on a non-critical path (branch)
+        # Find the path that includes this activity
+        for start_activity, paths in all_paths_with_durations.items():
+            for path_data in paths:
+                if activity in path_data['path']:
+                    path = path_data['path']
+                    activity_index = path.index(activity)
+                    # Calculate time to finish based on the path and critical path duration
+                    time_to_finish = critical_path_duration
+                    for i in range(len(path) - 1, activity_index, -1):
+                        time_to_finish -= df.set_index('Activity').loc[path[i]]['Duration']
+                    return time_to_finish  # Return the value as soon as it's calculated
+
+    return time_to_finish
 def main():
     st.title("Activity Network Diagram")
 
@@ -485,7 +530,7 @@ def main():
 
         # Create the network diagram
         fig = create_network_diagram(all_paths_df, x_coordinate_dict, y_coordinate_dict, radius, x_offset, y_offset,
-                                     project_start_date)
+                                     project_start_date, max_duration, all_paths_with_durations)
         # Update layout limits
         min_x = min(x_coordinate_dict.values()) - radius - x_padding
         # Calculate max_x correctly
@@ -522,7 +567,7 @@ def main():
 
             # --- Redraw the plot with updated coordinates ---
             fig = create_network_diagram(all_paths_df, x_coordinate_dict, y_coordinate_dict, radius, x_offset,
-                                         y_offset)
+                                        y_offset, project_start_date, max_duration, all_paths_with_durations)
 
             # Update layout limits
             min_x = min(x_coordinate_dict.values()) - radius - x_padding
