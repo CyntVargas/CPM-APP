@@ -402,6 +402,9 @@ def calculate_time_to_finish(df, activity, x_coordinate_dict, y_coordinate_dict,
                 max_duration = path_data['duration']
                 critical_path = path_data['path']
 
+    id = (critical_path[-1])
+    days =  (df[df['Activity'] == id]['Duration'].iloc[0])
+
     if activity in critical_path:
         # Activity is on the critical path
         #time_to_finish = critical_path_duration - x_coordinate_dict[activity]
@@ -415,7 +418,7 @@ def calculate_time_to_finish(df, activity, x_coordinate_dict, y_coordinate_dict,
                     path = path_data['path']
                     activity_index = path.index(activity)
                     # Calculate time to finish based on the path and critical path duration
-                    time_to_finish = critical_path_duration
+                    time_to_finish = critical_path_duration - days
                     for i in range(len(path) - 1, activity_index, -1):
                         time_to_finish -= df.set_index('Activity').loc[path[i]]['Duration']
                     return time_to_finish  # Return the value as soon as it's calculated
