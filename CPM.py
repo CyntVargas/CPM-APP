@@ -221,7 +221,7 @@ def create_network_diagram(df, x_coordinate_dict, y_coordinate_dict, radius, x_o
                     ))
                     # Draw horizontal line
                     fig_initial.add_trace(go.Scatter(
-                        x=[x_start, x_end],
+                        x=[x_start, x_end -0.6],
                         y=[y_end, y_end],
                         mode="lines",
                         line=dict(color=line_color, width=2),
@@ -229,7 +229,7 @@ def create_network_diagram(df, x_coordinate_dict, y_coordinate_dict, radius, x_o
                     ))
                     # Add arrowhead (marker) at the end of the horizontal line
                     fig_initial.add_trace(go.Scatter(
-                        x=[x_end],
+                        x=[x_end - 0.6],
                         y=[y_end],
                         mode="markers",
                         marker=dict(
@@ -242,7 +242,7 @@ def create_network_diagram(df, x_coordinate_dict, y_coordinate_dict, radius, x_o
                 else:
                     # Draw direct line
                     fig_initial.add_trace(go.Scatter(
-                        x=[x_start, x_end],
+                        x=[x_start + 0.6, x_end -0.6],
                         y=[y_start, y_start],
                         mode="lines",
                         line=dict(color=line_color, width=2),
@@ -250,7 +250,7 @@ def create_network_diagram(df, x_coordinate_dict, y_coordinate_dict, radius, x_o
                     ))
                     # Add arrowhead
                     fig_initial.add_trace(go.Scatter(
-                        x=[x_end],
+                        x=[x_end - 0.6],
                         y=[y_start],
                         mode="markers",
                         marker=dict(
@@ -425,7 +425,8 @@ def calculate_time_to_finish(df, activity, x_coordinate_dict, y_coordinate_dict,
 
     return time_to_finish
 def main():
-    st.title("Activity Network Diagram")
+    st.title("Diagrama De Ruta Critica (CPM)")
+    st.write("App desarrollada por Cynthia M. Vargas. Version 1.0 (Beta)")
 
     # File Upload
     uploaded_file = st.file_uploader("Upload your Project.csv file", type="csv")
