@@ -90,6 +90,15 @@ def create_network_diagram(df, x_coordinate_dict, y_coordinate_dict, radius, x_o
             for activity, x in x_coordinate_dict.items()
         }
 
+    # Find the critical path
+    max_duration = 0
+    critical_path = None
+    for start_activity, paths in all_paths_with_durations.items():
+        for path_data in paths:
+            if path_data['duration'] > max_duration:
+                max_duration = path_data['duration']
+                critical_path = path_data['path']
+
     # Draw circles and text
     for i in range(len(df)):
         activity = df["Activity"].iloc[i]
@@ -105,6 +114,12 @@ def create_network_diagram(df, x_coordinate_dict, y_coordinate_dict, radius, x_o
             radius_offset = radius / 3.5
             text_x_offset = x_offset
 
+        # Determine circle color based on whether the activity is on the critical path
+        if critical_path and activity in critical_path:
+            circle_color = "red"
+        else:
+            circle_color = "black"
+
         # Circle
         fig_initial.add_trace(go.Scatter(
             x=[x_coordinate],
@@ -113,8 +128,8 @@ def create_network_diagram(df, x_coordinate_dict, y_coordinate_dict, radius, x_o
             marker=dict(
                 symbol="circle",
                 size=radius * 20,
-                color="white",
-                line=dict(color="black", width=1)
+                color="white",  # Use the determined color
+                line=dict(color=circle_color, width=1)
             ),
             hoverinfo="skip"
         ))
